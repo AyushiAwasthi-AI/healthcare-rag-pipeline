@@ -1,0 +1,4 @@
+langchain==0.1.14
+langchain-text-splitters==0.0.1s
+pinecone==5.0.1
+langchain-text-splitters==0.3.8
