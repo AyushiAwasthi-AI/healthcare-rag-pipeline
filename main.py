@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ── Synchronous ingestion logic (unchanged) ──────────────────────────
-def run_ingestion(file_path: str,
+'''def run_ingestion(file_path: str,
                   embedder: DocumentEmbedder,
                   vector_store: VectorStore) -> dict:
     """
@@ -125,11 +125,11 @@ if __name__ == "__main__":
     print(f"Pipeline complete")
     print(f"Documents processed: {len(results)}")
     print(f"Total chunks stored: {total_chunks}")
-    print(f"{'='*50}")
+    print(f"{'='*50}")'''
 
 
 #-------------------------Old code-----------------------------
-'''
+
 import os
 import asyncio
 import logging
@@ -264,4 +264,4 @@ if __name__ == "__main__":
             print(f"Skipping: {os.path.basename(file_path)}")
             continue
 
-    print("\nAll documents processed successfully.") '''
+    print("\nAll documents processed successfully.")
