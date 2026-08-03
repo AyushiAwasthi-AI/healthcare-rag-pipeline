@@ -1,5 +1,5 @@
 langchain==0.1.14
-langchain-text-splitters==0.0.1s
+langchain-text-splitters==0.3.0
 pinecone==5.0.1
 langchain-text-splitters==0.3.8
 pydantic-settings
