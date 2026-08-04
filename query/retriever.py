@@ -17,14 +17,11 @@ logger = logging.getLogger(__name__)
 class Retriever:
     """
     Converts query text → embedding → Pinecone search → ChunkResults.
-
     Critical: embedding model MUST match ingestion model.
-    Ingestion used all-MiniLM-L6-v2 → query must also use all-MiniLM-L6-v2.
-    Mixing models = cosine scores are meaningless.
     """
 
     def __init__(self):
-        self.embedder = DocumentEmbedder()       # same model as ingestion
+        self.embedder    = DocumentEmbedder()
         self.vector_store = VectorStore()
         logger.info("Retriever initialized")
 
@@ -34,36 +31,43 @@ class Retriever:
         top_k: int = 10,
         filters: Optional[dict] = None,
     ) -> list[ChunkResult]:
-        """
-        Embed query and search Pinecone.
-        Both steps run in thread pool — embedding is CPU-bound,
-        Pinecone client is sync (blocking I/O).
-        """
-        # Embed — CPU-bound, must not block the event loop
+
+        # Step 1 — embed query (CPU-bound → thread pool)
         embedding = await asyncio.to_thread(
             self.embedder.embed_single_query, query
         )
 
-        # Search Pinecone — sync client, must not block the event loop
+        # Step 2 — search Pinecone (sync client → thread pool)
         matches = await asyncio.to_thread(
             self.vector_store.similarity_search,
             embedding,
             top_k,
             filters or {},
         )
+        # Step 3 — convert to ChunkResult objects
+        chunks = []
+        for match in matches:
+            meta = match.get("metadata", {})
 
-        chunks = [
-        ChunkResult(
-        chunk_id=match["id"],
-        text=match["metadata"].get("text", ""),
-        source=match["metadata"].get("source", ""),
-        score=round(match["score"], 4),
-        chunk_index=int(match["metadata"].get("chunk_index", 0)),
-        chunk_type=match["metadata"].get("type", "text_pdf"),
-    )
-    for match in matches
-]
+            # page_number: Pinecone may return int or float — normalise explicitly
+            raw_page = meta.get("page_number")
+            try:
+                page_num = int(raw_page) if raw_page is not None else None
+                if page_num is not None and page_num <= 0:
+                    page_num = None
+            except (ValueError, TypeError):
+                page_num = None
 
+            chunks.append(ChunkResult(
+                chunk_id      = match["id"],
+                text          = meta.get("text", ""),
+                source        = meta.get("source", ""),
+                score         = round(match["score"], 4),
+                chunk_index   = int(meta.get("chunk_index", 0)),
+                chunk_type    = meta.get("type", "text_pdf"),
+                page_number   = page_num,
+                section_header= meta.get("section_header") or None,
+            ))
 
         logger.info(f"Retrieved {len(chunks)} chunks for: '{query[:50]}'")
         return chunks

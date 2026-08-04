@@ -53,17 +53,18 @@ class Reranker:
         )
 
         results = [
-            ChunkResult(
-                chunk_id=chunk.chunk_id,
-                text=chunk.text,
-                source=chunk.source,
-                score=round(float(score), 4),
-                chunk_index=chunk.chunk_index,
-                chunk_type=chunk.chunk_type,
-            )
-            for score, chunk in ranked[:top_n]
-        ]
-
+        ChunkResult(
+        chunk_id      = chunk.chunk_id,
+        text          = chunk.text,
+        source        = chunk.source,
+        score         = round(float(score), 4),
+        chunk_index   = chunk.chunk_index,
+        chunk_type    = chunk.chunk_type,
+        page_number   = chunk.page_number,        # ADD
+        section_header= chunk.section_header,     # ADD
+    )
+    for score, chunk in ranked[:top_n]
+]
         logger.info(
             f"Reranked {len(chunks)} → {len(results)} chunks. "
             f"Top score: {results[0].score:.4f}"
