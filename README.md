@@ -57,11 +57,3 @@ api/             - FastAPI layer (coming)
 4. Install: pip install -r requirements.txt
 5. Copy .env.example to .env and add your API keys
 6. Run: python main.py
-
-## Evaluation Results
-| Metric | Score |
-|--------|-------|
-| Faithfulness | 1.0000 |
-| Answer Relevancy | 0.9458 |
-| Context Precision | 0.8978 |
-| Context Recall | 0.9000 |
