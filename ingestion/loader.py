@@ -16,101 +16,71 @@ class DocumentLoader:
     Handles: PDFs (text-based), PDFs(scanned), Images'''
 
     SUPPORTED_EXTENSIONS = {'.pdf','.png','.jpg', '.jpeg', '.tiff'}
-    def load(self, file_path: str) -> dict:
-        '''
-        Main entry point. Detects file type and routes to correct extraction method.
-        Returns dict with:
-        -text: extracted content
-        -source: original file path
-        -type: how it was processed'''
-
+    def load(self, file_path: str) -> list[dict]:
+        """
+        Returns LIST of page-level dicts — one dict per page.
+        Each page carries its own page_number.
+        Images return a single-item list for consistent interface.
+        """
         path = Path(file_path)
 
         if not path.exists():
-            raise FileNotFoundError(f"Document not found:{file_path}")
-        
+            raise FileNotFoundError(f"Document not found: {file_path}")
         if path.suffix.lower() not in self.SUPPORTED_EXTENSIONS:
             raise ValueError(f"Unsupported file type: {path.suffix}")
-        
-        # Route to correct extractor based on file type
 
-        if path.suffix.lower() =='.pdf':
+        if path.suffix.lower() == '.pdf':
             return self._load_pdf(path)
         else:
-            return self._load_image(path)
-        
-    def _load_pdf(self, path:Path) -> dict:
+            return [self._load_image(path)]  # wrap in list for consistent interface
+
+
+    def _load_pdf(self, path: Path) -> list[dict]:
         """
-        PDFs are either text-based or scanned images.
-        We try text extraction first.
-        If extracted text is too short - it's a scanned PDF.
-        Route to OCR in that case."""
-
-        '''Production-grade PDF loader.
-        Handles: encrypted PDFs, scanned pages, mixed PDFs'''
-
-        #text=self._extract_pdf_text(path)
-
-        # If less than 50 chars extracted, PDF is likely scanned
-        '''for page in reader.pages:
-        page_text = page.extract_text() or ""
-        if len(page_text.strip()) < 50:
-        # This specific page needs OCR
-        page_text = self._ocr_page(page)
-        text += page_text'''
-
-        '''if len(text.strip()) < 50:
-            text = self._ocr_pdf(path)
-            doc_type = "scanned_pdf"
-        else:
-            doc_type = "text_pdf"
-
-        return {
-            "text": text,
-            "source":str(path),
-            "type": doc_type
-        }'''
-
+        Processes PDF page by page.
+        Returns one dict per page — each with its page_number.
+        Skips scanned pages (< 50 chars) with a warning.
+        """
         with open(path, 'rb') as f:
-            reader=pypdf.PdfReader(f)
-            #Check encryption first -  silent failure #1
+            reader = pypdf.PdfReader(f)
+
             if reader.is_encrypted:
-                logger.warning(f"Encrypted PDF skipped:{path.name}")
-                return {
-                    "text":"",
+                logger.warning(f"Encrypted PDF skipped: {path.name}")
+                return [{
+                    "text": "",
                     "source": str(path),
                     "type": "encrypted_pdf",
+                    "page_number": 0,
+                    "total_pages": 0,
                     "error": "PDF is encrypted"
-                }
-            
-            text=""
-            scanned_pages = 0
+                }]
+
+            pages = []
+            total_pages = len(reader.pages)
+            scanned_count = 0
 
             for i, page in enumerate(reader.pages):
                 page_text = page.extract_text() or ""
 
                 if len(page_text.strip()) < 50:
-                    #Page-level OCR fallback
-                    logger.info(f"Page{i+1} appears scanned in {path.name}")
-                    scanned_pages+=1
-                    # OCR expansion comes next iteration
-                else:
-                    text+=page_text
+                    logger.info(f"Page {i+1} appears scanned in {path.name} — skipping")
+                    scanned_count += 1
+                    continue
+
+                pages.append({
+                    "text": page_text,
+                    "source": str(path),
+                    "type": "text_pdf",
+                    "page_number": i + 1,      # 1-indexed, matches PDF page numbers
+                    "total_pages": total_pages,
+                })
 
             logger.info(
-                f"Loaded {path.name}:"
-                f"{len(reader.pages)} pages,"
-                f"{scanned_pages} scanned,"
-                f"{len(text)} chars extracted"
-            )   
-
-            return {
-                "text": text,
-                "source": str(path),
-                "type": "mixed_pdf" if scanned_pages>0 else "text_pdf",
-                "pages": len(reader.pages),
-                "scanned_pages": scanned_pages
-            }
+                f"Loaded {path.name}: "
+                f"{len(pages)} pages with text, "
+                f"{scanned_count} scanned pages skipped"
+            )
+            return pages
 
     def extract_pdf_text(self, path: Path) -> str:
         """Extract text from a text-based PDF."""

@@ -2,9 +2,9 @@ import uuid
 import logging
 from typing import List, Dict
 from sentence_transformers import SentenceTransformer
-from dotenv import load_dotenv
+#from dotenv import load_dotenv
 
-load_dotenv()
+#load_dotenv()
 logger = logging.getLogger(__name__)
 
 class DocumentEmbedder:
@@ -67,15 +67,23 @@ class DocumentEmbedder:
         logger.info(f"Successfully embedded {len(embedded_chunks)} chunks")
         return embedded_chunks
 
-    def _generate_chunk_id(self, chunk: Dict) -> str:
+    #def _generate_chunk_id(self, chunk: Dict) -> str:
         """
         Generate unique, deterministic ID per chunk.
         Deterministic means same chunk always gets same ID.
         Critical for HIPAA deletion — can find chunk again later.
         """
-        # Combine source + chunk_index for uniqueness
+        '''# Combine source + chunk_index for uniqueness
         unique_string = f"{chunk['source']}_{chunk['chunk_index']}"
         # UUID5 generates deterministic UUID from string
+        return str(uuid.uuid5(uuid.NAMESPACE_DNS, unique_string))'''
+    def _generate_chunk_id(self, chunk: dict) -> str:
+        """
+        Deterministic ID from source + page + position.
+        Same document re-ingested = same IDs = safe upsert, no duplicates.
+        """
+        page = chunk.get("page_number", 0)
+        unique_string = f"{chunk['source']}_p{page}_{chunk['chunk_index']}"
         return str(uuid.uuid5(uuid.NAMESPACE_DNS, unique_string))
 
     @classmethod
@@ -87,3 +95,12 @@ class DocumentEmbedder:
         model_name = cls.MODEL_REGISTRY.get(doc_type, "all-MiniLM-L6-v2")
         logger.info(f"Selected model {model_name} for {doc_type}")
         return cls(model_name)
+
+    def embed_single_query(self, query: str) -> list[float]:
+        """
+        Embed a single query string for retrieval.
+        MUST use same model as document ingestion - 
+        mixing models breaks cosine similarity entirely
+        """
+        embedding = self.model.encode(query)
+        return embedding.tolist()

@@ -105,19 +105,19 @@ class DocumentChunker:
         )
         return splitter.split_text(text)
 
-    def _attach_metadata(self, 
-                        chunks: List[str], 
-                        document: dict) -> List[dict]:
+    def _attach_metadata(self, chunks: List[str], document: dict) -> List[dict]:
         return [
             {
                 "text": chunk,
                 "source": document["source"],
                 "type": document["type"],
                 "chunk_index": i,
-                "total_chunks": len(chunks)
+                "total_chunks": len(chunks),
+                "page_number": document.get("page_number"),   # ADD
+                "total_pages": document.get("total_pages"),   # ADD
             }
             for i, chunk in enumerate(chunks)
-        ]
+    ]
 
 
     def _calculate_chunk_size(self, text:str) -> int:
