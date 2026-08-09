@@ -263,3 +263,18 @@ This commit history tells a story. Each commit is a working, testable increment.
 | CI/CD | GitHub Actions with lint, import validation, Docker build |
 | Debugging methodology | Diagnostic scripts to isolate failures, not random trial and error |
 | System design thinking | Singleton pattern, normalization layers, defensive metadata handling |
+
+
+## 8. LangSmith Observability
+
+- Traces must be configured at import time (os.environ set in config.py),
+  not in FastAPI lifespan — LangSmith SDK reads env vars before lifespan runs
+- Two traces visible per query: rag_query_pipeline (parent) + clinical_llm_generator (child)
+- rag_query_pipeline: 4.25s total end-to-end
+- clinical_llm_generator: 0.68s LLM call only
+- Shows exact prompt sent to LLM, chunks retrieved, scores — critical for debugging wrong answers
+
+Interview answer: "When a clinician reports a wrong answer, I open the LangSmith trace
+and within 30 seconds I can see whether the problem was retrieval (wrong chunks fetched),
+reranking (right chunks in wrong order), or generation (right chunks but bad prompt response).
+Without tracing, debugging a 5-stage async pipeline is guesswork."
