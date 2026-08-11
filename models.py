@@ -27,6 +27,7 @@ class QueryRequest(BaseModel):
     Request model for POST/query.
     Validates and cleans all incoming data before the pipeline touches it. 
     """
+    model_config = ConfigDict(protected_namespaces=())   # ADD THIS
     model_config = ConfigDict(
         extra="forbid",   # reject unknown fields — security
         str_strip_whitespace=True  # "  HbA1c  " → "HbA1c" automatically
@@ -93,6 +94,35 @@ class IngestionResponse(BaseModel):
     status: str
     source: str
     chunks_stored: int
+    processing_time_ms: float
+
+# ── Agent endpoint ────────────────────────────────────────────────────────────
+
+class AgentQueryRequest(BaseModel):
+    """Request model for POST /agent/query."""
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    query:       str
+    patient_id:  Optional[str] = None
+    max_results: int = 5
+
+    @field_validator("query")
+    @classmethod
+    def validate_query(cls, v: str) -> str:
+        if len(v.strip()) < 3:
+            raise ValueError("Query too short — minimum 3 characters")
+        return v.strip()
+
+
+class AgentQueryResponse(BaseModel):
+    """Response model for POST /agent/query."""
+    answer:           str
+    query:            str
+    sources:          list[str]
+    needs_retrieval:  bool           # did agent decide to search documents?
+    reasoning:        str            # agent's decision explanation
+    chunks_used:      int
+    model_used:       str
     processing_time_ms: float
 
 #-----------------Health check---------------------------
