@@ -295,3 +295,22 @@ Ingest one document into the vector store.
 ## Documents Ingested
 
 5 WHO diabetes and hypertension guidelines (1455 chunks, 384-dimensional embeddings).
+
+## 9. LangGraph Clinical Agent
+
+Graph structure:
+  [decide] → (needs_retrieval=True)  → [retrieve] → [generate] → END
+  [decide] → (needs_retrieval=False) → [generate] → END
+
+- Clinical query: needs_retrieval=True, full RAG pipeline runs
+- General greeting: needs_retrieval=False, Pinecone skipped entirely
+- Agent reuses existing QueryEngine and Generator — adds decision layer on top
+- State (ClinicalAgentState TypedDict) carries data between all nodes
+- route_after_decision() is the conditional edge function LangGraph calls
+
+Interview answer: "The agent adds a reasoning step before retrieval.
+A pipeline always retrieves — an agent decides first. For a clinical system
+this means non-medical queries never hit Pinecone, reducing latency and cost.
+The decision is transparent — the response includes the agent's reasoning string
+so clinicians can audit why the system chose each path."
+
