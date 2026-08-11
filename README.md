@@ -314,3 +314,8 @@ this means non-medical queries never hit Pinecone, reducing latency and cost.
 The decision is transparent — the response includes the agent's reasoning string
 so clinicians can audit why the system chose each path."
 
+## Observability — LangSmith Trace
+
+![LangSmith Trace](https://github.com/user-attachments/assets/93f99b63-8f94-4d3b-a91a-a043f8d15686)
+
+
