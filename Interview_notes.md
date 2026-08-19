@@ -278,3 +278,19 @@ Interview answer: "When a clinician reports a wrong answer, I open the LangSmith
 and within 30 seconds I can see whether the problem was retrieval (wrong chunks fetched),
 reranking (right chunks in wrong order), or generation (right chunks but bad prompt response).
 Without tracing, debugging a 5-stage async pipeline is guesswork."
+
+## 9. Groq Model Management
+
+- After rotating API keys, new key may not have same model access as old key
+- Always query available models: client.models.list() before assuming model availability
+- llama-3.1-8b-instant and llama-3.3-70b-versatile require account verification
+- Fallback model: openai/gpt-oss-120b — available on all Groq accounts
+- JSON parser in LangGraph decision node must handle multiple output formats:
+  some models wrap JSON in markdown fences, others return raw JSON
+- Safe default: always default needs_retrieval=True on parse failure
+  (clinical system must never skip retrieval silently)
+
+Interview answer: "I built defensive JSON parsing in the agent decision node
+because different LLM providers format structured outputs differently.
+The fallback always defaults to retrieval — in a clinical system, skipping
+retrieval silently is worse than an unnecessary Pinecone call."
