@@ -84,18 +84,27 @@ async def decide_node(state: ClinicalAgentState) -> ClinicalAgentState:
     raw = response.choices[0].message.content.strip()
 
     try:
-        # Strip markdown code fences if present
-        if "```" in raw:
-            raw = raw.split("```")[1].replace("json", "").strip()
-        decision        = json.loads(raw)
+        raw_clean = raw.strip()
+        # Strip markdown fences if model wraps in ```json
+        if "```" in raw_clean:
+            parts = raw_clean.split("```")
+            for part in parts:
+                part = part.strip().lstrip("json").strip()
+                if part.startswith("{"):
+                    raw_clean = part
+                    break
+    # Find JSON object anywhere in the response
+        start = raw_clean.find("{")
+        end   = raw_clean.rfind("}") + 1
+        if start != -1 and end > start:
+            raw_clean = raw_clean[start:end]
+        decision        = json.loads(raw_clean)
         needs_retrieval = bool(decision.get("needs_retrieval", True))
         reasoning       = decision.get("reasoning", "Decision made")
-    except (json.JSONDecodeError, KeyError, IndexError):
-        # Default to retrieval on any parse failure — safer for clinical systems
+    except (json.JSONDecodeError, KeyError, IndexError, ValueError):
         needs_retrieval = True
         reasoning       = "Parse failed — defaulting to retrieval for safety"
-
-    logger.info(f"Agent decision: needs_retrieval={needs_retrieval} | {reasoning}")
+        logger.info(f"Agent decision: needs_retrieval={needs_retrieval} | {reasoning}")
 
     return {
         **state,

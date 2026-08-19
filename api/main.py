@@ -10,7 +10,9 @@ FastAPI application — Clinical Decision Support RAG API.
 Singleton pattern: QueryEngine and Generator load once at startup.
 Loading them per-request would add 3-5 seconds to every call.
 """
+import uuid
 import time
+import os
 import asyncio
 import logging
 from contextlib import asynccontextmanager
@@ -28,6 +30,8 @@ from models import (
     HealthCheckResponse,
 )
 from config import settings
+from agent.clinical_agent import run_clinical_agent, get_agent
+from models import AgentQueryRequest, AgentQueryResponse
 
 logger = logging.getLogger(__name__)
 
@@ -42,11 +46,38 @@ _vector_store:  VectorStore        = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+
+    global _query_engine, _generator, _embedder, _vector_store
+
+    # ── LangSmith tracing ──────────────────────────────────────────
+    if settings.langsmith_api_key:
+        os.environ["LANGCHAIN_TRACING_V2"] = settings.langchain_tracing_v2
+        os.environ["LANGCHAIN_API_KEY"]     = settings.langsmith_api_key
+        os.environ["LANGCHAIN_PROJECT"]     = settings.langchain_project
+        logger.info(f"LangSmith tracing enabled → {settings.langchain_project}")
+    else:
+        logger.info("LangSmith tracing disabled — LANGSMITH_API_KEY not set")
+
+    # ── Load models ────────────────────────────────────────────────
+    logger.info("Starting up — loading models...")
+    _query_engine = QueryEngine()
+    _generator    = Generator()
+    _embedder     = DocumentEmbedder()
+    _vector_store = VectorStore()
+    _vector_store = VectorStore()
+    get_agent()                          # ADD THIS LINE HERE
+    logger.info("All models loaded. Server ready.")
+    
+
+    yield
+
+    logger.info("Shutting down.")
+    
     """
     FastAPI lifespan — runs startup code before serving requests.
     Models load ONCE here. All requests reuse the same instances.
     Replaces deprecated @app.on_event("startup").
-    """
+    
     global _query_engine, _generator, _embedder, _vector_store
 
     logger.info("Starting up — loading models...")
@@ -59,6 +90,7 @@ async def lifespan(app: FastAPI):
     yield   # server runs here
 
     logger.info("Shutting down.")
+    """
 
 
 # ── App ───────────────────────────────────────────────────────────────────────
@@ -97,31 +129,39 @@ async def health_check():
 # ── POST /query ───────────────────────────────────────────────────────────────
 @app.post("/query", response_model=QueryResponse)
 async def query(request: QueryRequest):
-    """
-    Full RAG pipeline for one clinical query.
-    processor → retriever → reranker → generator
-    Returns answer with page-level source citations.
-    """
+    request_id = str(uuid.uuid4())
+    logger.info(f"[{request_id}] POST /query received")
     start = time.time()
 
     try:
-        chunks = await _query_engine.run(
-            query      = request.query,
-            patient_id = request.patient_id,
-            max_results= request.max_results,
+        chunks = await asyncio.wait_for(
+            _query_engine.run(
+                query      = request.query,
+                patient_id = request.patient_id,
+                max_results= request.max_results,
+            ),
+            timeout=30.0
+        )
+        result = await asyncio.wait_for(
+            _generator.generate(
+                query      = request.query,
+                chunks     = chunks,
+                patient_id = request.patient_id,
+            ),
+            timeout=30.0
         )
 
-        result = await _generator.generate(
-            query      = request.query,
-            chunks     = chunks,
-            patient_id = request.patient_id,
-        )
+    except asyncio.TimeoutError:
+        logger.error(f"[{request_id}] Query timed out after 30s")
+        raise HTTPException(status_code=504, detail="Request timed out — try again")
 
     except Exception as e:
-        logger.error(f"Query failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        # HIPAA: never log raw query or exception message — may contain PHI
+        logger.error(f"[{request_id}] Query failed: {type(e).__name__}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
     processing_time = round((time.time() - start) * 1000, 2)
+    logger.info(f"[{request_id}] Query complete in {processing_time}ms")
 
     return QueryResponse(
         answer                = result["answer"],
@@ -132,7 +172,6 @@ async def query(request: QueryRequest):
         model_used            = result["model_used"],
         processing_time_ms    = processing_time,
     )
-
 
 # ── POST /ingest ──────────────────────────────────────────────────────────────
 @app.post("/ingest", response_model=IngestionResponse)
@@ -176,4 +215,44 @@ async def ingest(request: IngestionRequest):
         source             = request.file_path,
         chunks_stored      = stored,
         processing_time_ms = processing_time,
+    )
+
+# ── POST /agent/query ─────────────────────────────────────────────────────────
+@app.post("/agent/query", response_model=AgentQueryResponse)
+async def agent_query(request: AgentQueryRequest):
+    request_id = str(uuid.uuid4())
+    logger.info(f"[{request_id}] POST /agent/query received")
+    start = time.time()
+
+    try:
+        result = await asyncio.wait_for(
+            run_clinical_agent(
+                query      = request.query,
+                patient_id = request.patient_id,
+                max_results= request.max_results,
+            ),
+            timeout=45.0   # agent gets more time — it makes an extra LLM call
+        )
+
+    except asyncio.TimeoutError:
+        logger.error(f"[{request_id}] Agent query timed out after 45s")
+        raise HTTPException(status_code=504, detail="Request timed out — try again")
+
+    except Exception as e:
+        # HIPAA: never log raw query or exception message — may contain PHI
+        logger.error(f"[{request_id}] Agent query failed: {type(e).__name__}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+    processing_time = round((time.time() - start) * 1000, 2)
+    logger.info(f"[{request_id}] Agent complete in {processing_time}ms")
+
+    return AgentQueryResponse(
+        answer            = result["answer"],
+        query             = request.query,
+        sources           = result["sources"],
+        needs_retrieval   = result["needs_retrieval"],
+        reasoning         = result["reasoning"],
+        chunks_used       = result["chunks_used"],
+        model_used        = result["model_used"],
+        processing_time_ms= processing_time,
     )

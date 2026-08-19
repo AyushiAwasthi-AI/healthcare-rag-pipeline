@@ -64,6 +64,7 @@ class QueryRequest(BaseModel):
 
 class QueryResponse(BaseModel):
     """Response model for POST /query."""
+    model_config = ConfigDict(protected_namespaces=())  
     answer: str
     query: str
     patient_id: Optional[str] = None
@@ -100,7 +101,7 @@ class IngestionResponse(BaseModel):
 
 class AgentQueryRequest(BaseModel):
     """Request model for POST /agent/query."""
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True, protected_namespaces=())
 
     query:       str
     patient_id:  Optional[str] = None
