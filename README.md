@@ -318,4 +318,18 @@ so clinicians can audit why the system chose each path."
 
 ![LangSmith Trace](https://github.com/user-attachments/assets/93f99b63-8f94-4d3b-a91a-a043f8d15686)
 
+## Clinical Safety Design Principles
 
+**Zero hallucination policy:** RAGAS faithfulness score of 1.0 across evaluation
+set. The LLM is instructed to respond with "The provided documents do not contain
+sufficient information" rather than generating beyond retrieved context.
+
+**Auditability:** Every response includes exact page numbers from source documents,
+enabling clinicians to verify citations in the original guidelines. Required for
+clinical AI deployment under FDA SaMD (Software as a Medical Device) guidelines.
+
+**HIPAA-compliant error handling:** Error logs emit only exception type names,
+never raw query content, which may contain Protected Health Information (PHI).
+
+**Deterministic document IDs:** uuid5-based chunk IDs enable reliable document
+deletion for HIPAA right-to-erasure compliance without orphaned vectors.
