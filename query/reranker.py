@@ -13,6 +13,7 @@ Interview answer: "retrieve 10 with bi-encoder, rerank to 5 with cross-encoder."
 import logging
 from sentence_transformers import CrossEncoder
 from models import ChunkResult
+from langsmith import traceable   
 
 logger = logging.getLogger(__name__)
 
@@ -29,12 +30,17 @@ class Reranker:
         self.model = CrossEncoder(RERANK_MODEL)
         logger.info(f"Reranker loaded: {RERANK_MODEL}")
 
-    def rerank(
+    '''def rerank(
         self,
         query: str,
         chunks: list[ChunkResult],
         top_n: int = 5,
-    ) -> list[ChunkResult]:
+    ) -> list[ChunkResult]:'''
+    
+
+    @traceable(name="cross_encoder_reranker", run_type="reranker")
+    def rerank(self, query, chunks, top_n=5):
+    # existing code unchanged
         """
         Score each (query, chunk_text) pair.
         Returns top_n sorted by cross-encoder score descending.

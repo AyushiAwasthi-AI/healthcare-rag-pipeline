@@ -49,7 +49,7 @@ class QueryProcessor:
         """Normalize whitespace, strip junk characters."""
         query = query.strip()
         query = re.sub(r'\s+', ' ', query)
-        query = re.sub(r'[^\w\s\?\.\,\-\/]', '', query)
+        query = re.sub(r'[^\w\s\?\.\,\-\/\%]', '', query)
         # Ensure query ends with ? for better semantic matching
         if not query.endswith('?') and len(query.split()) > 3:
             query = query + '?'

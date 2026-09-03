@@ -10,6 +10,7 @@ from typing import Optional
 from ingestion.embedder import DocumentEmbedder
 from ingestion.vector_store import VectorStore
 from models import ChunkResult
+from langsmith import traceable   
 
 logger = logging.getLogger(__name__)
 
@@ -25,12 +26,16 @@ class Retriever:
         self.vector_store = VectorStore()
         logger.info("Retriever initialized")
 
-    async def retrieve(
+    '''async def retrieve(
         self,
         query: str,
         top_k: int = 10,
         filters: Optional[dict] = None,
-    ) -> list[ChunkResult]:
+    ) -> list[ChunkResult]:'''
+
+    @traceable(name="pinecone_retriever", run_type="retriever")
+    async def retrieve(self, query, top_k=10, filters=None):
+        
 
         # Step 1 — embed query (CPU-bound → thread pool)
         embedding = await asyncio.to_thread(

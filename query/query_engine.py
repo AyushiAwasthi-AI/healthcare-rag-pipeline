@@ -11,6 +11,7 @@ from query.processor import QueryProcessor
 from query.retriever import Retriever
 from query.reranker import Reranker
 from models import ChunkResult
+from langsmith import traceable   
 
 logger = logging.getLogger(__name__)
 
@@ -27,16 +28,20 @@ class QueryEngine:
         self.reranker = Reranker()
         logger.info("QueryEngine ready")
 
-    async def run(
+    """async def run(
         self,
         query: str,
         patient_id: Optional[str] = None,
         max_results: int = 5,
-    ) -> list[ChunkResult]:
-        """
-        Run the full query pipeline.
-        Returns max_results ranked ChunkResult objects for the generation layer.
-        """
+    ) -> list[ChunkResult]:"""
+
+
+    # add decorator immediately before async def run:
+    @traceable(name="rag_query_pipeline", run_type="chain")
+    async def run(self, query, patient_id=None, max_results=5):
+        # existing code unchanged
+        
+        #Run the full query pipeline.Returns max_results ranked ChunkResult objects for the generation layer.
         # Stage 1 — normalize query, extract filters
         processed = self.processor.process(query, patient_id)
 
