@@ -294,3 +294,5 @@ Interview answer: "I built defensive JSON parsing in the agent decision node
 because different LLM providers format structured outputs differently.
 The fallback always defaults to retrieval — in a clinical system, skipping
 retrieval silently is worse than an unnecessary Pinecone call."
+
+"Pinecone metadata returns page_number inconsistently as int/float/string — added explicit normalization to prevent citation errors."
