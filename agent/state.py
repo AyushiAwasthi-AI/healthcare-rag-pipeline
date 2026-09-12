@@ -21,3 +21,5 @@ class ClinicalAgentState(TypedDict):
     reasoning:       str                  # agent's decision explanation
     model_used:      str
     iterations:      int                  # guard against infinite loops
+    confidence_score: float          # ADD — avg cross-encoder score
+    requires_review:  bool           # ADD — flag for human review

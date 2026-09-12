@@ -254,5 +254,8 @@ async def agent_query(request: AgentQueryRequest):
         reasoning         = result["reasoning"],
         chunks_used       = result["chunks_used"],
         model_used        = result["model_used"],
-        processing_time_ms= processing_time,
+        processing_time_ms= round((time.time() - start) * 1000, 2),
+        confidence_score  = result.get("confidence_score", 0.0),   # ADD
+        requires_review   = result.get("requires_review", False),   # ADD
+
     )

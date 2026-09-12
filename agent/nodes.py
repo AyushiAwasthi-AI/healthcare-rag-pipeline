@@ -155,3 +155,54 @@ def route_after_decision(state: ClinicalAgentState) -> str:
     LangGraph calls this after decide_node to determine routing.
     """
     return "retrieve" if state.get("needs_retrieval", True) else "generate"
+
+CONFIDENCE_THRESHOLD = 3.5   # cross-encoder scores range ~0 to 10
+                              # 3.5 = moderate clinical relevance
+                              # below this = uncertain, flag for review
+
+async def confidence_check_node(state: ClinicalAgentState) -> ClinicalAgentState:
+    """
+    Human-in-the-loop gate.
+
+    Evaluates average cross-encoder score of retrieved chunks.
+    High confidence → answer delivered directly to clinician.
+    Low confidence  → answer flagged for pharmacist/clinical review.
+
+    Why this matters in healthcare:
+    AI should augment clinical judgment, never replace it.
+    When the system is uncertain, a human must verify before
+    the answer reaches a doctor.
+    """
+    chunks = state.get("chunks", [])
+
+    if not chunks:
+        confidence = 0.0
+    else:
+        scores     = [c.score for c in chunks if c.score is not None]
+        confidence = round(sum(scores) / len(scores), 4) if scores else 0.0
+
+    requires_review = confidence < CONFIDENCE_THRESHOLD
+
+    if requires_review:
+        # Prepend clinical safety warning to the answer
+        warning = (
+            f"⚠️ CLINICAL REVIEW REQUIRED — Confidence score: {confidence:.2f} "
+            f"(threshold: {CONFIDENCE_THRESHOLD}). "
+            f"This response should be verified by a qualified clinician "
+            f"before being used in patient care.\n\n"
+        )
+        answer = warning + state.get("answer", "")
+        logger.warning(
+            f"Low confidence answer flagged for review: "
+            f"score={confidence:.4f} < threshold={CONFIDENCE_THRESHOLD}"
+        )
+    else:
+        answer = state.get("answer", "")
+        logger.info(f"Confidence check passed: score={confidence:.4f}")
+
+    return {
+        **state,
+        "confidence_score": confidence,
+        "requires_review":  requires_review,
+        "answer":           answer,
+    }

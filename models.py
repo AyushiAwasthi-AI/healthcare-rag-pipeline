@@ -117,6 +117,7 @@ class AgentQueryRequest(BaseModel):
 
 class AgentQueryResponse(BaseModel):
     """Response model for POST /agent/query."""
+    model_config = ConfigDict(protected_namespaces=())
     answer:           str
     query:            str
     sources:          list[str]
@@ -125,6 +126,8 @@ class AgentQueryResponse(BaseModel):
     chunks_used:      int
     model_used:       str
     processing_time_ms: float
+    confidence_score:   float = 0.0    # ADD
+    requires_review:    bool  = False  # ADD
 
 #-----------------Health check---------------------------
 

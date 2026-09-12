@@ -49,6 +49,7 @@ class QueryProcessor:
         """Normalize whitespace, strip junk characters."""
         query = query.strip()
         query = re.sub(r'\s+', ' ', query)
+        # To this — % is clinically significant (HbA1c 7.5%, eGFR 45%):
         query = re.sub(r'[^\w\s\?\.\,\-\/\%]', '', query)
         # Ensure query ends with ? for better semantic matching
         if not query.endswith('?') and len(query.split()) > 3:

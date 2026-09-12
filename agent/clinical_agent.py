@@ -20,6 +20,10 @@ logger = logging.getLogger(__name__)
 # ── Singleton graph — compiled once, reused across all requests ───────────────
 _compiled_agent = None
 
+from agent.nodes import (
+    decide_node, retrieve_node, generate_node,
+    route_after_decision, confidence_check_node    # ADD
+)
 
 def _build_agent():
     """Build and compile the LangGraph clinical decision agent."""
@@ -29,6 +33,8 @@ def _build_agent():
     graph.add_node("decide",   decide_node)
     graph.add_node("retrieve", retrieve_node)
     graph.add_node("generate", generate_node)
+    graph.add_node("confidence_check", confidence_check_node)   # ADD
+
 
     # Entry point
     graph.set_entry_point("decide")
@@ -42,6 +48,9 @@ def _build_agent():
 
     # After retrieval, always generate
     graph.add_edge("retrieve", "generate")
+    graph.add_edge("generate", "confidence_check")    # ADD — generate → check
+    graph.add_edge("confidence_check", END)           # ADD — check → end
+
 
     # After generation, done
     graph.add_edge("generate", END)
@@ -98,4 +107,6 @@ async def run_clinical_agent(
         "needs_retrieval": final_state["needs_retrieval"],
         "reasoning":       final_state["reasoning"],
         "chunks_used":     len(final_state["chunks"]),
+        "confidence_score": final_state.get("confidence_score", 0.0),  # ADD
+        "requires_review":  final_state.get("requires_review", False),  # ADD
     }

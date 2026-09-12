@@ -8,6 +8,9 @@ import logging
 from groq import AsyncGroq
 from models import ChunkResult
 from config import settings
+from langsmith import traceable  
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from groq import APIStatusError, APITimeoutError
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +48,84 @@ def _build_context_block(chunks: list[ChunkResult]) -> str:
 
 
 class Generator:
+
+    def __init__(self):
+        self.client = AsyncGroq(api_key=settings.groq_api_key)
+        self.model  = settings.llm_model
+        logger.info(f"Generator initialized: {self.model}")
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((APIStatusError, APITimeoutError)),
+        reraise=True,
+    )
+    async def _call_llm(self, messages: list) -> object:
+        """
+        Call Groq with exponential backoff retry.
+        Retries on rate limits (429) and timeouts.
+        Fails fast on auth errors (401) — no point retrying bad credentials.
+        Max 3 attempts: 0s, 2s, 4s wait between retries.
+        """
+        return await self.client.chat.completions.create(
+            model      = self.model,
+            messages   = messages,
+            temperature= 0.1,
+            max_tokens = 600,
+        )
+
+    async def generate(self, query, chunks, patient_id=None):
+        if not chunks:
+            logger.warning(f"No chunks for query: '{query[:50]}'")
+            return {
+                "answer":     "No relevant context found in the knowledge base.",
+                "sources":    [],
+                "model_used": self.model,
+                "tokens_used": 0,
+            }
+
+        context_block = _build_context_block(chunks)
+        messages = [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {
+                "role": "user",
+                "content": (
+                    f"Context from clinical documents:\n\n"
+                    f"{context_block}\n\n"
+                    f"Question: {query}\n\n"
+                    f"Answer strictly from the context. "
+                    f"Cite source numbers [1], [2] for each claim."
+                ),
+            },
+        ]
+
+        response    = await self._call_llm(messages)
+        answer      = response.choices[0].message.content.strip()
+        tokens_used = response.usage.total_tokens
+
+        sources = list({
+            chunk.source.replace("\\", "/").split("/")[-1]
+            for chunk in chunks
+        })
+
+        logger.info(
+            f"Generated: {len(answer)} chars | "
+            f"{len(sources)} source(s) | {tokens_used} tokens"
+        )
+
+        return {
+            "answer":      answer,
+            "sources":     sources,
+            "model_used":  self.model,
+            "tokens_used": tokens_used,
+        }
+
+
+
+#This is the old setup as it didn't had the retry logic for production
+
+'''
+class Generator:
     """
     Generates clinical answers from ranked chunks using Groq.
     AsyncGroq is natively async — no asyncio.to_thread() needed.
@@ -55,12 +136,17 @@ class Generator:
         self.model = settings.llm_model
         logger.info(f"Generator initialized: {self.model}")
 
-    async def generate(
+
+    """async def generate(
         self,
         query: str,
         chunks: list[ChunkResult],
         patient_id: str | None = None,
-    ) -> dict:
+    ) -> dict:"""
+    
+
+    @traceable(name="clinical_llm_generator", run_type="llm")
+    async def generate(self, query, chunks, patient_id=None):
         """
         Build clinical prompt and generate answer from Groq.
         Returns answer, sources, model used, tokens consumed.
@@ -121,3 +207,4 @@ class Generator:
             "model_used": self.model,
             "tokens_used": tokens_used,
         }
+'''
