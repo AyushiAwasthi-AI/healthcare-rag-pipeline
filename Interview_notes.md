@@ -296,3 +296,40 @@ The fallback always defaults to retrieval — in a clinical system, skipping
 retrieval silently is worse than an unnecessary Pinecone call."
 
 "Pinecone metadata returns page_number inconsistently as int/float/string — added explicit normalization to prevent citation errors."
+
+## 10. Known Gaps — Documented for Interviews
+
+### Gap 1: BM25 hybrid search missing
+Current system uses vector search only.
+BM25 misses exact medical term matches (ICD codes, drug names).
+Phase 2: rank_bm25 library, combine BM25 + vector scores with RRF
+(Reciprocal Rank Fusion). One additional retriever, merge results.
+
+### Gap 2: Double model load in retriever
+retriever.py creates new DocumentEmbedder() in __init__.
+query_engine.py also creates one. Two instances of same model in memory.
+Fix: dependency injection — pass singleton embedder into Retriever.__init__.
+
+### Gap 3: No real-time RAGAS
+Current RAGAS runs offline on test set only.
+Production: LLM judge scores every query for faithfulness automatically.
+Architecture: after generate_node, async background task calls RAGAS,
+logs score to LangSmith, alerts if faithfulness drops below 0.85.
+
+### Gap 4: Single LLM provider — no failover
+If Groq goes down, all queries fail.
+Fix: LLM abstraction layer (LiteLLM or custom) with provider failover.
+Primary: Groq. Fallback: Azure OpenAI. Automatic switchover on 5xx errors.
+
+### Gap 5: Sync reranker blocking (already fixed)
+cross-encoder.predict() is CPU-bound.
+Without asyncio.to_thread(), it blocks the event loop for ~0.8s per query.
+At 10 concurrent users, this serialises all reranking — 8s cumulative block.
+Fix already implemented: asyncio.to_thread in query_engine.py.
+
+### Gap 6: Confidence threshold is static
+Current threshold: 3.5 (hardcoded cross-encoder score).
+Production: dynamic threshold based on query type.
+Clinical diagnosis queries: threshold 5.0 (higher bar).
+General medication queries: threshold 3.0.
+Implementation: query classifier sets threshold before confidence check.
