@@ -135,5 +135,5 @@ class RAGASEvaluator:
         else:
             logger.info("All RAGAS metrics within thresholds — pipeline healthy.")
 
-            return scores
+        return scores
         
