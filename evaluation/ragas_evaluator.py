@@ -108,4 +108,32 @@ class RAGASEvaluator:
         }
 
         logger.info(f"RAGAS scores: {scores}")
-        return scores
+        # Threshold alerting — production systems alert when quality degrades
+        THRESHOLDS = {
+            "faithfulness":      0.85,   # below = hallucination risk
+            "answer_relevancy":  0.80,   # below = answers drifting off-topic
+            "context_precision": 0.75,   # below = retrieval noise increasing
+            "context_recall":    0.75,   # below = missing critical chunks
+        }
+
+        alerts = []
+        for metric, threshold in THRESHOLDS.items():
+            score = scores.get(metric, 0.0)
+            if score < threshold:
+                alert_msg = (
+                    f"⚠️  RAGAS ALERT: {metric} = {score:.4f} "
+                    f"(threshold: {threshold}) — investigate retrieval pipeline"
+                )
+                alerts.append(alert_msg)
+                logger.warning(alert_msg)
+
+        if alerts:
+            logger.warning(
+                f"RAGAS degradation detected: {len(alerts)} metric(s) below threshold. "
+                f"In production: trigger PagerDuty, Slack alert, or block deployment."
+            )
+        else:
+            logger.info("All RAGAS metrics within thresholds — pipeline healthy.")
+
+            return scores
+        
