@@ -1,0 +1,47 @@
+{
+  "resourceType": "Bundle",
+  "type": "collection",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Patient",
+        "id": "P001",
+        "name": [{"given": ["Priya"], "family": "Sharma"}],
+        "birthDate": "1978-03-15",
+        "gender": "female"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "code": {
+          "text": "Type 2 Diabetes Mellitus",
+          "coding": [{"system": "http://hl7.org/fhir/sid/icd-10", "code": "E11.9"}]
+        },
+        "clinicalStatus": {"text": "active"}
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "code": {"text": "HbA1c"},
+        "valueQuantity": {"value": 8.2, "unit": "%"},
+        "effectiveDateTime": "2026-07-15"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "code": {"text": "eGFR"},
+        "valueQuantity": {"value": 62, "unit": "mL/min/1.73m2"},
+        "effectiveDateTime": "2026-07-15"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "medicationCodeableConcept": {"text": "Metformin 1000mg twice daily"}
+      }
+    }
+  ]
+}

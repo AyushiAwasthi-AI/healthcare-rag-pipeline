@@ -11,6 +11,7 @@ from config import settings
 from langsmith import traceable  
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from groq import APIStatusError, APITimeoutError
+from ingestion.fhir_loader import FHIRPatientLoader
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,7 @@ class Generator:
     def __init__(self):
         self.client = AsyncGroq(api_key=settings.groq_api_key)
         self.model  = settings.llm_model
+        self.fhir_loader  = FHIRPatientLoader()   # ADD
         logger.info(f"Generator initialized: {self.model}")
 
     @retry(
@@ -85,6 +87,15 @@ class Generator:
             }
 
         context_block = _build_context_block(chunks)
+
+         # FHIR patient context — personalizes the answer to this patient
+        patient_context = ""
+        if patient_id:
+            fhir_context = self.fhir_loader.load_patient_context(patient_id)
+            if fhir_context:
+                patient_context = f"\n\n{fhir_context}\n"
+                logger.info(f"FHIR context loaded for patient {patient_id}")
+
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
             {

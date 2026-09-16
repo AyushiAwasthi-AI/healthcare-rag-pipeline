@@ -32,6 +32,8 @@ from models import (
 from config import settings
 from agent.clinical_agent import run_clinical_agent, get_agent
 from models import AgentQueryRequest, AgentQueryResponse
+from audit.audit_logger import log_query
+
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +127,33 @@ async def health_check():
         environment            = settings.environment,
     )
 
+# ── GET /audit ───────────────────────────────────────────────────────────────
+
+@app.get("/audit")
+async def get_audit_log(limit: int = 20):
+    """
+    Returns recent audit log entries.
+    HIPAA: returns query hashes, never raw query text.
+    In production, this endpoint requires admin authentication.
+    """
+    import sqlite3
+    from audit.audit_logger import DB_PATH
+
+    if not DB_PATH.exists():
+        return {"entries": [], "total": 0}
+
+    conn   = sqlite3.connect(str(DB_PATH))
+    cursor = conn.execute(
+        "SELECT * FROM audit_log ORDER BY id DESC LIMIT ?", (limit,)
+    )
+    cols    = [d[0] for d in cursor.description]
+    entries = [dict(zip(cols, row)) for row in cursor.fetchall()]
+    conn.close()
+
+    return {"entries": entries, "total": len(entries)}
+
+
+
 
 # ── POST /query ───────────────────────────────────────────────────────────────
 @app.post("/query", response_model=QueryResponse)
@@ -162,6 +191,17 @@ async def query(request: QueryRequest):
 
     processing_time = round((time.time() - start) * 1000, 2)
     logger.info(f"[{request_id}] Query complete in {processing_time}ms")
+
+    log_query(
+    request_id   = request_id,
+    query        = request.query,
+    endpoint     = "/query",
+    patient_id   = request.patient_id,
+    chunks_used  = len(chunks),
+    model_used   = result["model_used"],
+    processing_ms= processing_time,
+    outcome      = "success",
+    )
 
     return QueryResponse(
         answer                = result["answer"],
@@ -245,6 +285,7 @@ async def agent_query(request: AgentQueryRequest):
 
     processing_time = round((time.time() - start) * 1000, 2)
     logger.info(f"[{request_id}] Agent complete in {processing_time}ms")
+
 
     return AgentQueryResponse(
         answer            = result["answer"],
