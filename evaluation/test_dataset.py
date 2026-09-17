@@ -1,6 +1,6 @@
 """
 evaluation/test_dataset.py
-5 hand-crafted question-answer pairs from the diabetes PDFs.
+10 hand-crafted question-answer pairs from the diabetes PDFs.
 Ground truths are written from verified document content.
 This is your RAGAS test set — small but representative.
 """
