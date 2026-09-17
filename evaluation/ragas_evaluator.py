@@ -45,7 +45,7 @@ def _safe_score(val) -> float:
 def _build_ragas_llm():
     return LangchainLLMWrapper(
         ChatGroq(
-            model="openai/gpt-oss-120b",    # changed from llama-3.1-8b-instant
+            model="groq/compound-mini",    # changed from llama-3.1-8b-instant
             groq_api_key=settings.groq_api_key,
         )
     )

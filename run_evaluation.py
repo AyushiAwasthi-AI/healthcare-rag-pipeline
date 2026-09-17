@@ -4,6 +4,7 @@ Runs RAGAS evaluation against the live pipeline.
 Execute this after any significant change to retrieval or generation.
 Results go into README as pipeline quality evidence.
 """
+import os
 import asyncio
 import logging
 from query import QueryEngine
@@ -14,19 +15,15 @@ from evaluation.test_dataset import TEST_DATASET
 logging.basicConfig(level=logging.WARNING)  # suppress INFO noise during eval
 
 
-async def collect_pipeline_outputs() -> tuple:
-    """Run each test question through the full pipeline."""
+async def collect_pipeline_outputs(dataset) -> tuple:
     engine    = QueryEngine()
     generator = Generator()
-
     questions, answers, contexts, ground_truths = [], [], [], []
 
-    for item in TEST_DATASET:
+    for item in dataset:
         print(f"  Evaluating: {item['question'][:60]}...")
-
         chunks = await engine.run(item["question"])
         result = await generator.generate(item["question"], chunks)
-
         questions.append(item["question"])
         answers.append(result["answer"])
         contexts.append([c.text for c in chunks])
@@ -36,9 +33,15 @@ async def collect_pipeline_outputs() -> tuple:
 
 
 async def main():
+    # CI mode uses 3 questions — regression detection only
+    # Local mode uses full 10-question dataset
+    is_ci = os.getenv("CI", "false").lower() == "true"
+    dataset = TEST_DATASET[:3] if is_ci else TEST_DATASET
+    
+    print(f"\nMode: {'CI (3 questions)' if is_ci else 'Local (10 questions)'}")
     print("\nCollecting pipeline outputs...")
     questions, answers, contexts, ground_truths = \
-        await collect_pipeline_outputs()
+        await collect_pipeline_outputs(dataset)
 
     print("\nRunning RAGAS evaluation (this takes 2-3 minutes)...")
     evaluator = RAGASEvaluator()
