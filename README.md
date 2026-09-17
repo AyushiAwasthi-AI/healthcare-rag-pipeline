@@ -31,17 +31,16 @@ Every answer is auditable. Every claim is traceable to a page. Nothing is invent
 
 ## Evaluation Results
 
-| Metric | Score | Production Threshold | Status |
-|--------|-------|---------------------|--------|
-| Faithfulness | **1.0000** | 0.85 | ✅ Passing |
-| Answer Relevancy | **0.9458** | 0.80 | ✅ Passing |
-| Context Precision | **0.8978** | 0.75 | ✅ Passing |
-| Context Recall | **0.9000** | 0.75 | ✅ Passing |
+| Metric | Score | Judge Model |
+|--------|-------|------------|
+| Faithfulness | **1.0000** | Llama 3.1-8b (local run) |
+| Answer Relevancy | **0.9458** | Llama 3.1-8b (local run) |
+| Context Precision | **0.8978** | Llama 3.1-8b (local run) |
+| Context Recall | **0.9000** | Llama 3.1-8b (local run) |
 
-Evaluated with RAGAS 0.2.6 on WHO diabetes guidelines.
-The CI pipeline automatically blocks deployment if faithfulness drops below 0.85.
-Faithfulness at 1.0 means the LLM never generated a claim beyond retrieved context —
-the most critical metric for a system informing clinical decisions.
+*RAGAS scores depend on the judge LLM. CI runs automated evaluation on every
+deployment using gpt-oss-120b as judge for regression detection.
+Baseline scores above were measured with Llama 3.1 as judge.*
 
 ---
 
