@@ -303,6 +303,30 @@ Current threshold is 3.5 — hardcoded, applies to all query types. Production: 
 **Gap 6 — RAGAS ground truth bottleneck at scale**
 10 ground-truth questions is manageable manually. At 1,000 questions it requires a clinical team. Production solution: stronger LLM generates ground truths from source documents, clinician spot-checks 10%. Reduces annotation burden by 90%.
 
+### Gap 7: Confidence gate measures retrieval quality, not generation faithfulness
+Current confidence_check_node averages cross-encoder scores of (query, chunk) pairs
+from the reranking stage. This measures whether retrieved chunks are relevant to the
+query — not whether the generated answer is grounded in those chunks.
+
+A hallucinated answer that is on-topic scores high on retrieval relevance
+but is not caught by the confidence gate.
+
+Production fix: add a second cross-encoder pass after generation, scoring
+(chunk, generated_answer) pairs. High score = answer is grounded in chunks.
+Low score = answer diverges from retrieved context = flag for review.
+
+This is runtime faithfulness checking. RAGAS faithfulness does this offline
+on a test set. Runtime faithfulness checking does it on every production query.
+Architecture: add groundedness_check_node after generate_node in the LangGraph
+graph, scoring top 5 (chunk, answer) pairs with the same cross-encoder.
+
+Interview answer: "Our confidence gate measures retrieval quality — are the
+retrieved chunks relevant to the query? It does not measure generation
+faithfulness — did the LLM actually use those chunks? Hallucination is
+currently caught by the clinical system prompt instruction and measured
+offline by RAGAS. Phase 2 adds runtime faithfulness checking via a second
+cross-encoder pass scoring (chunk, generated_answer) pairs after generation."
+
 ---
 
 ## 7. What This Project Demonstrates
