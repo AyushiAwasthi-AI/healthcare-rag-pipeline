@@ -189,6 +189,7 @@ a 5-stage async pipeline is guesswork. With it, the failure point is visible imm
 | Config | pydantic-settings | Type-safe .env, path-anchored to file location |
 | Container | Docker + docker-compose | CPU torch pre-install, secrets at runtime |
 | CI/CD | GitHub Actions | Lint + imports + Docker build + RAGAS evaluation gate |
+| Deployment | Azure Container Apps | Serverless, auto-scaling, HTTPS |
 
 ---
 
