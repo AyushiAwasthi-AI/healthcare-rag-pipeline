@@ -38,7 +38,7 @@ class Reranker:
     ) -> list[ChunkResult]:'''
     
 
-    @traceable(name="cross_encoder_reranker", run_type="reranker")
+    @traceable(name="cross_encoder_reranker", run_type="chain")
     def rerank(self, query, chunks, top_n=5):
     # existing code unchanged
         """
