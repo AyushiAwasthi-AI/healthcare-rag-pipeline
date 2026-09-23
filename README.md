@@ -10,6 +10,7 @@ retrieve evidence from WHO clinical guidelines — with zero hallucination,
 page-level citations, FHIR R4 patient context, and a LangGraph agent
 that decides whether to search the knowledge base before every query.
 
+**Live API:** https://healthcare-rag-api.happyflower-b39041fb.eastus.azurecontainerapps.io/docs
 ---
 
 ## The Problem This Solves
