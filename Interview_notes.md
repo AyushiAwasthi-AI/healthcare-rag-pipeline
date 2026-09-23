@@ -218,6 +218,23 @@ Shallow: returns 200 if the process is alive. Does not verify external dependenc
 Deep (what we built): calls Pinecone index stats API and Groq models list API on every probe. Three-state: healthy / degraded / unhealthy. Azure Container Apps and Kubernetes use this to route traffic — degraded means partial functionality, unhealthy means remove from load balancer entirely.
 **Interview answer:** "A process can be running but completely unable to serve requests if its dependencies are down. Shallow checks hide Pinecone outages. We also have liveness vs readiness distinction: liveness is 'is the process alive, should we restart it?', readiness is 'is it ready to serve traffic, should we route to it?' In production you need both."
 
+
+## Azure Container Apps Deployment
+
+- ACR Tasks blocked on free tier — fixed by building image in GitHub Actions
+  and pushing directly to ACR using docker/build-push-action
+- Container Apps requires secrets as quoted strings: "key=value" format
+- min-replicas 1 keeps container warm — no cold start delay during demos
+- Deep health check confirms Pinecone connected and model loaded at startup
+- environment: production confirms correct environment variable injection
+- Live URL: https://healthcare-rag-api.happyflower-b39041fb.eastus.azurecontainerapps.io/docs
+
+Interview answer: "The system is deployed to Azure Container Apps at a public
+HTTPS URL. The Docker image is built in GitHub Actions and pushed to Azure
+Container Registry on every merge to main. Secrets are injected at runtime
+via Azure Container Apps secret references — never baked into the image.
+The /health endpoint confirms all external dependencies are reachable before
+the container accepts traffic."
 ---
 
 ## 4. RAGAS Evaluation Results
