@@ -89,13 +89,17 @@ decide_node             ← LLM reasons: does this need document retrieval?
         (general greeting — Pinecone skipped entirely)
                                                         │
                                                         ▼
-                                              confidence_check_node
+                                                confidence_check_node
+                                              (avg CrossEncoder score of top 5 chunks)
+
+                                              CrossEncoder range: 0–10+
                                                         │
                                     ┌───────────────────┴──────────────────┐
                                     │                                      │
-                             score ≥ 3.5                            score < 3.5
-                          Answer delivered                    ⚠️ Flagged for
-                          to care manager                     clinical review
+                             avg score ≥ 3.5                      avg score < 3.5
+                          (strong retrieval match)             (weak retrieval match)
+                          Answer delivered directly            ⚠️ Flagged for
+                          to care manager                      clinical review
 ```
 
 The agent adds a reasoning step before every retrieval call. Non-clinical queries
