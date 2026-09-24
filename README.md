@@ -43,6 +43,7 @@ Context Recall	    0.9000	                0.3333
 The primary evaluation (Llama 3.1 judge) reflects calibrated scores where ground truths were written to match the judge's evaluation criteria. The CI evaluation uses a fixed judge model (gpt-oss-120b) for regression detection — if scores drop significantly between deployments, the pipeline alerts. The CI does not hard-block on absolute scores because RAGAS thresholds must be calibrated per judge model.
 
 Faithfulness at 1.0 (Llama 3.1 judge) means the LLM never generated a claim beyond retrieved context across all 10 test questions — the most critical metric for a system informing clinical decisions.
+
 ---
 
 ## Evaluation Results
