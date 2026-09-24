@@ -249,6 +249,28 @@ context_recall:    0.9000
 Test set: 10 clinical questions on WHO diabetes guidelines
 Embedding: all-MiniLM-L6-v2 (384-dim) | Framework: RAGAS 0.2.6
 
+## Full 30-Question RAGAS Evaluation
+
+Scores with openai/gpt-oss-20b judge on 30 clinical questions:
+faithfulness: 0.8250 | answer_relevancy: 0.6127
+context_precision: 0.7018 | context_recall: 0.4103
+
+Key finding: context_recall at 0.41 shows top-5 cosine retrieval
+cannot surface all relevant passages for complex multi-topic clinical
+questions. Many topics (retinopathy, foot care, gestational diabetes)
+have relevant content spread across multiple document sections.
+
+This finding directly motivates Phase 2 BM25 hybrid search — keyword
+matching captures exact medical term occurrences that semantic search
+misses when the query and relevant passage use different vocabulary.
+
+Interview answer: "Our 30-question evaluation revealed context recall
+of 0.41 — retrieval surfaces less than half the information needed for
+complex clinical questions. This is expected with pure vector search on
+multi-topic clinical questions and motivates our Phase 2 BM25 hybrid
+search implementation. Faithfulness at 0.825 confirms the LLM stays
+grounded in retrieved context even when retrieval is incomplete."
+
 ### CI regression check (gpt-oss-120b judge)
 ```
 faithfulness:      0.6282
