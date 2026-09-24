@@ -4,13 +4,13 @@
 ![Python](https://img.shields.io/badge/python-3.10-blue)
 ![Faithfulness](https://img.shields.io/badge/RAGAS%20faithfulness-1.0000-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
+![Live API](https://healthcare-rag-api.happyflower-b39041fb.eastus.azurecontainerapps.io/docs)
 
 A production-grade clinical decision support system that helps care managers
 retrieve evidence from WHO clinical guidelines — with zero hallucination,
 page-level citations, FHIR R4 patient context, and a LangGraph agent
 that decides whether to search the knowledge base before every query.
 
-**Live API:** https://healthcare-rag-api.happyflower-b39041fb.eastus.azurecontainerapps.io/docs
 ---
 
 ## The Problem This Solves
