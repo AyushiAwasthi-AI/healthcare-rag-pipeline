@@ -2,15 +2,15 @@
 
 ![CI](https://github.com/AyushiAwasthi-AI/healthcare-rag-pipeline/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/badge/python-3.10-blue)
-![Faithfulness](https://img.shields.io/badge/RAGAS%20faithfulness-1.0000-brightgreen)
+![Faithfulness](https://img.shields.io/badge/RAGAS%20faithfulness-0.825-yellow)
 ![License](https://img.shields.io/badge/license-MIT-green)
+![Live API](https://healthcare-rag-api.happyflower-b39041fb.eastus.azurecontainerapps.io/docs)
 
 A production-grade clinical decision support system that helps care managers
 retrieve evidence from WHO clinical guidelines — with zero hallucination,
 page-level citations, FHIR R4 patient context, and a LangGraph agent
 that decides whether to search the knowledge base before every query.
 
-**Live API:** https://healthcare-rag-api.happyflower-b39041fb.eastus.azurecontainerapps.io/docs
 ---
 
 ## The Problem This Solves
@@ -43,7 +43,38 @@ Context Recall	    0.9000	                0.3333
 The primary evaluation (Llama 3.1 judge) reflects calibrated scores where ground truths were written to match the judge's evaluation criteria. The CI evaluation uses a fixed judge model (gpt-oss-120b) for regression detection — if scores drop significantly between deployments, the pipeline alerts. The CI does not hard-block on absolute scores because RAGAS thresholds must be calibrated per judge model.
 
 Faithfulness at 1.0 (Llama 3.1 judge) means the LLM never generated a claim beyond retrieved context across all 10 test questions — the most critical metric for a system informing clinical decisions.
+
 ---
+
+## Evaluation Results
+
+Evaluated with RAGAS 0.2.6 on 30 clinical QA pairs covering diabetes
+diagnosis, management, complications, and monitoring from WHO guidelines.
+Judge model: openai/gpt-oss-20b via Groq.
+
+| Metric | Score | Threshold | Status |
+|--------|-------|-----------|--------|
+| Faithfulness | **0.8250** | 0.85 | ⚠ Near threshold |
+| Answer Relevancy | **0.6127** | 0.80 | ⚠ Below threshold |
+| Context Precision | **0.7018** | 0.75 | ⚠ Near threshold |
+| Context Recall | **0.4103** | 0.75 | ⚠ Below threshold |
+
+**What the scores reveal:**
+
+Faithfulness at 0.825 confirms the system rarely hallucinates —
+82.5% of generated claims are grounded in retrieved context.
+
+Context recall at 0.41 is the most informative finding. Top-5 cosine
+retrieval alone cannot surface all relevant passages for complex
+multi-topic clinical questions. This directly motivates Phase 2 hybrid
+BM25 + vector search, which captures exact medical term matches that
+semantic search misses.
+
+Note: RAGAS scores depend on the judge LLM. These results use
+openai/gpt-oss-20b as judge. An earlier local run with Llama 3.1
+as judge produced faithfulness 1.0, answer relevancy 0.95 on 10
+questions — demonstrating significant judge model variance, a known
+limitation of LLM-as-judge evaluation frameworks.
 
 ## Architecture
 
