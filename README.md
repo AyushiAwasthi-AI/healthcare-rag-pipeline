@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/AyushiAwasthi-AI/healthcare-rag-pipeline/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/badge/python-3.10-blue)
-![Faithfulness](https://img.shields.io/badge/RAGAS%20faithfulness-1.0000-brightgreen)
+![Faithfulness](https://img.shields.io/badge/RAGAS%20faithfulness-0.825-yellow)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Live API](https://healthcare-rag-api.happyflower-b39041fb.eastus.azurecontainerapps.io/docs)
 
