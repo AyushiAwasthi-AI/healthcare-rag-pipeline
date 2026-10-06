@@ -366,6 +366,23 @@ currently caught by the clinical system prompt instruction and measured
 offline by RAGAS. Phase 2 adds runtime faithfulness checking via a second
 cross-encoder pass scoring (chunk, generated_answer) pairs after generation."
 
+## Precise Technical Specs — 
+
+**LLM model:** openai/gpt-oss-120b via Groq LPU inference
+**RAGAS judge:** openai/gpt-oss-20b (lower token cost for evaluation)
+**Embedding model:** all-MiniLM-L6-v2 — 384 dimensions
+
+**Chunk sizes (dynamic by document length):**
+- < 5,000 chars → 512 tokens, 128 overlap
+- 5,000–20,000 chars → 800 tokens, 200 overlap  
+- > 20,000 chars → 1,024 tokens, 256 overlap
+- Overlap always = chunk_size // 4 (25%)
+
+**Caching:** None. Phase 2. Clinical staleness risk documented.
+
+**Vectors in Pinecone:** 1,455 (from 5 WHO guidelines)
+**Retrieval:** top_k=10 bi-encoder, reranked to top_k=5 cross-encoder
+
 ---
 
 ## 7. What This Project Demonstrates
