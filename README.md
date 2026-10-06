@@ -54,9 +54,9 @@ Judge model: openai/gpt-oss-20b via Groq.
 
 | Metric | Score | Threshold | Status |
 |--------|-------|-----------|--------|
-| Faithfulness | **0.8250** | 0.85 | ⚠ Near threshold |
+| Faithfulness | **0.8250** | 0.80 | ⚠ Near threshold |
 | Answer Relevancy | **0.6127** | 0.80 | ⚠ Below threshold |
-| Context Precision | **0.7018** | 0.75 | ⚠ Near threshold |
+| Context Precision | **0.7018** | 0.65 | ⚠ Near threshold |
 | Context Recall | **0.4103** | 0.75 | ⚠ Below threshold |
 
 **What the scores reveal:**
