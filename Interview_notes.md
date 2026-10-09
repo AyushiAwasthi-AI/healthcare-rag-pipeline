@@ -178,6 +178,7 @@ The generator loads the patient's FHIR R4 bundle — conditions, lab observation
 Every query is logged with timestamp, request ID, patient ID, and SHA-256 hash of the query text. Raw query text is never stored — it may contain PHI. Error logs emit only exception type names, never messages which could echo back PHI.
 **Interview answer:** "HIPAA §164.312(b) requires audit controls that record activity in systems containing PHI. We log the query hash not the query itself — allowing correlation without PHI storage. This is a technical safeguard requirement, not optional."
 
+
 ---
 
 ## 3. Key Technical Concepts
@@ -302,6 +303,38 @@ re-ingestion when guideline versions update.
 
 Never claim the system reflects current clinical guidelines.
 Claim the architecture supports easy knowledge base updates.
+
+## Chunk Size vs Embedding Model Token Limit
+
+CRITICAL GAP — know this cold before any interview.
+
+The chunker uses RecursiveCharacterTextSplitter with CHARACTER-based 
+sizing (512/800/1024 chars). The resume incorrectly says "tokens."
+Fix resume to say "characters" before submitting anywhere.
+
+all-MiniLM-L6-v2 has a 256 WordPiece token limit.
+Silent truncation occurs when chunk exceeds this limit:
+- 512 chars ≈ 128–170 tokens → safe
+- 800 chars ≈ 200–267 tokens → borderline  
+- 1024 chars ≈ 256–341 tokens → SOME CHUNKS SILENTLY TRUNCATED
+
+Sentence-transformers truncates without raising an error or warning.
+The embedding only captures the first 256 tokens of long chunks.
+The tail of the chunk is invisible to vector search.
+
+Phase 2 fix options:
+1. Pass tokenizer as length_function to RecursiveCharacterTextSplitter
+   so chunk sizes respect the embedding model's actual token limit
+2. Cap max chunk size at 900 characters to stay within 256-token budget
+3. Switch to all-mpnet-base-v2 (512 token limit) for larger chunks
+
+Interview answer: "Our chunker uses character-based splitting — 512, 
+800, or 1024 characters depending on document length. The embedding 
+model all-MiniLM-L6-v2 has a 256-token hard limit, which means the 
+largest chunks can exceed this boundary and get silently truncated 
+during embedding. This is a documented gap — Phase 2 adds token-aware 
+chunking using the model's own tokenizer as the length function, 
+ensuring no chunk exceeds the embedding model's capacity."
 ---
 
 ## 5. Questions You Will Be Asked
