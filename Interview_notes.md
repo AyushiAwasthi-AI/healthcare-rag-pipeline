@@ -114,6 +114,7 @@
 **Fix:** Queried available models via `client.models.list()` to find what the key actually supports. Switched to `openai/gpt-oss-120b` which is available on all Groq accounts.
 **Interview answer:** "Never assume model availability after key rotation. Always query the available models list before hardcoding a model name. This is particularly important in healthcare where an unavailable model would silently break clinical query serving."
 
+
 ---
 
 ## 2. Architecture Decisions
@@ -286,6 +287,21 @@ The CI scores are lower for two reasons: gpt-oss-120b applies different evaluati
 
 **Interview answer:** "Our CI pipeline uses a fixed judge model for regression detection — if scores drop significantly between deployments, it alerts. But we do not treat the absolute CI score as a quality gate without calibration, because RAGAS scores vary significantly across judge LLMs. The primary evaluation uses Llama 3.1 as judge — faithfulness 1.0, all metrics above 0.89. The CI uses a different model and serves as relative regression detection. Comparing absolute RAGAS scores across judge models is methodologically incorrect — the same pipeline can score 1.0 with one judge and 0.6 with another."
 
+## Document Currency Limitation
+
+WHO guidelines ingested are from 2002–2007 era (BTN_D1 explicitly 
+references the 2002–2007 five-year plan). Recent updates not covered:
+- 2023 ADA Standards of Care
+- 2020 WHO HEARTS-D Type 2 Diabetes module
+- Updated HbA1c targets and GLP-1 agonist recommendations
+
+This is a known limitation to disclose honestly in interviews.
+The architecture handles it cleanly — POST /ingest accepts any new PDF
+with zero code changes. Phase 2 adds Airflow DAG for scheduled
+re-ingestion when guideline versions update.
+
+Never claim the system reflects current clinical guidelines.
+Claim the architecture supports easy knowledge base updates.
 ---
 
 ## 5. Questions You Will Be Asked
